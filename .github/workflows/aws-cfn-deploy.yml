@@ -125,7 +125,7 @@ jobs:
           echo "Deploying to ${{ matrix.env }}..."
           aws cloudformation create-stack \
             --template-url https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/infrastructure/${{ matrix.env }}/root.yaml \
-            --stack-name Deploy${{ matrix.env | capitalize }}Stack \
+            --stack-name Deploy${{ matrix.env }}Stack \
             --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
             --capabilities CAPABILITY_NAMED_IAM
-          aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env | capitalize }}Stack
+          aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env }}Stack
