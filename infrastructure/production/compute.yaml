@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: EC2 Auto Scaling Group with Launch Template and IAM Role for the Environment
+
+Parameters:
+  Environment:
+    Type: String
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t3.micro
+      - t3.small
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  MyPublicSubnet:
+    Type: String
+
+  InstanceSecurityGroup:
+    Type: String
+
+Resources:
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Environment}-ec2-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ec2.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub "${Environment}-ec2-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - ssm:*
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+
+  IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${Environment}-ec2-profile"
+      Roles: [ !Ref EC2Role ]
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${Environment}-launch-template"
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        KeyName: WorkshopKeyPair
+        IamInstanceProfile:
+          Name: !Ref IAMInstanceProfile
+        ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        UserData:
+          Fn::Base64: 
+            !Sub |
+              #!/bin/bash
+              yum update -y
+              yum install -y httpd.x86_64
+              systemctl start httpd.service
+              systemctl enable httpd.service
+
+              TOKEN=$(curl --request PUT "http://169.254.169.254/latest/api/token" --header "X-aws-ec2-metadata-token-ttl-seconds: 3600")
+
+              instanceId=$(curl -s http://169.254.169.254/latest/meta-data/instance-id --header "X-aws-ec2-metadata-token: $TOKEN")
+              instanceAZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone --header "X-aws-ec2-metadata-token: $TOKEN")
+              privHostName=$(curl -s http://169.254.169.254/latest/meta-data/local-hostname --header "X-aws-ec2-metadata-token: $TOKEN")
+              privIPv4=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 --header "X-aws-ec2-metadata-token: $TOKEN")
+              
+              echo "<font face = "Verdana" size = "5">"                               > /var/www/html/index.html
+              echo "<center><h1>AWS Linux VM - ${Environment} Environment </h1></center>"   >> /var/www/html/index.html
+              echo "<center> <b>EC2 Instance Metadata</b> </center>"                  >> /var/www/html/index.html
+              echo "<center> <b>Instance ID:</b> $instanceId </center>"               >> /var/www/html/index.html
+              echo "<center> <b>AWS Availablity Zone:</b> $instanceAZ </center>"      >> /var/www/html/index.html
+              echo "<center> <b>Private Hostname:</b> $privHostName </center>"        >> /var/www/html/index.html
+              echo "<center> <b>Private IPv4:</b> $privIPv4 </center>"                >> /var/www/html/index.html
+              echo "</font>"                                                          >> /var/www/html/index.html
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${Environment}-asg"
+      VPCZoneIdentifier:
+        - !Ref MyPublicSubnet
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      Tags:
+        - Key: Name
+          Value: !Sub "${Environment}-ec2-instance"
+          PropagateAtLaunch: true
+
+Outputs:
+  EnvironmentName:
+    Description: Environment of this deployment
+    Value: !Ref Environment

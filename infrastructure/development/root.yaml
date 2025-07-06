@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Parent Stack for the specified environment'
+
+Parameters:
+  TemplateUrlBase: 
+    Type: String
+    Default: 'https://ct-cfn-files-for-stack.s3.us-east-1.amazonaws.com/infrastructure'
+  Environment:
+    Description: List of available environments
+    Type: String
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Default: development
+
+Resources:
+  NetworkStack:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub '${TemplateUrlBase}/${Environment}/network.yaml'
+      Parameters:
+        Environment: !Ref Environment
+
+  ComputeStack:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub '${TemplateUrlBase}/${Environment}/compute.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        MyPublicSubnet: !GetAtt NetworkStack.Outputs.MyPublicSubnet
+        InstanceSecurityGroup: !GetAtt NetworkStack.Outputs.InstanceSecurityGroup

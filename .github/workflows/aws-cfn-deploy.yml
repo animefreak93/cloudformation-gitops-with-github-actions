@@ -1,0 +1,131 @@
+name: AWS CloudFormation CI/CD using GitHub Actions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  BUCKET_NAME: ct-cfn-files-for-stack
+
+jobs:
+
+  create_bucket:
+    name: Create S3 Bucket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy bucket stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name cfn-template-bucket \
+            --template-file infrastructure/create-cfn-template-bucket.yaml \
+            --region $AWS_REGION \
+            --capabilities CAPABILITY_NAMED_IAM
+
+  copy_templates:
+    name: Upload Templates to S3
+    needs: create_bucket
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Copy templates to S3
+        run: |
+          aws s3 cp infrastructure/ s3://${BUCKET_NAME}/infrastructure/ --recursive
+
+  lint_templates:
+    name: Lint CloudFormation Templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install cfn-lint
+        run: pip install cfn-lint
+
+      - name: Run cfn-lint
+        run: |
+          ERR=0
+          for file in $(find ./infrastructure -type f \( -iname "*.yaml" -o -iname "*.yml" \)); do
+            cfn-lint "$file" || ERR=1
+          done
+          if [ "$ERR" -eq "1" ]; then
+            exit 1
+          fi
+
+  validate_templates:
+    name: Validate Templates
+    needs: [copy_templates]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate all templates
+        run: |
+          for env in development staging production; do
+            aws cloudformation validate-template \
+              --template-url https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/infrastructure/$env/root.yaml
+          done
+
+  deploy:
+    name: Deploy Stacks
+    needs: [validate_templates]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [development, staging, production]
+    environment:
+      name: ${{ matrix.env }}
+      url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy CloudFormation Stack
+        if: matrix.env != 'production' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Deploying to ${{ matrix.env }}..."
+          aws cloudformation create-stack \
+            --template-url https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/infrastructure/${{ matrix.env }}/root.yaml \
+            --stack-name Deploy${{ matrix.env | capitalize }}Stack \
+            --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
+            --capabilities CAPABILITY_NAMED_IAM
+          aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env | capitalize }}Stack

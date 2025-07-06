@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CFN for creating an S3 bucket for nested stack templates and applying a policy for access from CloudFormation and EC2 instances'
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Default: 'ct-cfn-files-for-stack'
+
+Resources:
+#####################################
+# S3 bucket for CFN nested stack templates
+#####################################
+  PipelineArtifactStoreS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+
+  PipelineArtifactStoreS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PipelineArtifactStoreS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3AccessForJenkinsService
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+                - ec2.amazonaws.com
+            Effect: Allow
+            Action: 
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:PutObject
+              - s3:ListBucket
+            Resource: 
+              - !Sub 'arn:${AWS::Partition}:s3:::${S3BucketName}/*'
+              - !Sub 'arn:${AWS::Partition}:s3:::${S3BucketName}'
