@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  BUCKET_NAME: ct-cfn-files-for-stack
+  BUCKET_NAME: ct-cfn-files-for-stack-github-actions
 
 jobs:
 

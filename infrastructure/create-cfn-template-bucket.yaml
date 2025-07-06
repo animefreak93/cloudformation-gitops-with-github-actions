@@ -4,7 +4,7 @@ Description: 'CFN for creating an S3 bucket for nested stack templates and apply
 Parameters:
   S3BucketName:
     Type: String
-    Default: 'ct-cfn-files-for-stack'
+    Default: 'ct-cfn-files-for-stack-github-actions'
 
 Resources:
 #####################################
