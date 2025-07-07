@@ -257,25 +257,33 @@ In this yml file, `push` to `main`: Automatically triggers the workflow whenever
 
 `workflow_dispatch`: Enables manual trigger via GitHub UI (useful for production environments or reruns).
 
-![alt text](images/environments.png)
+![alt text](/images/environments.png)
 
 ### Step 4: Git Push to repo to see automated GitHub Actions Pipeline running
 Git push the components to GitHub Repo
+![alt text](/images/pipeline_1.png)
 
+![alt text](/images/pipeline_2.png)
+
+![alt text](/images/pipeline_3_create_bucket_stack.png)
 
 Development and Staging environments getting provisioned whereas production environment stage awaiting manual approval.
 
+![alt text](/images/pipeline_4.png)
 
+![alt text](/images/pipeline_5_dev_stage_stacks.png)
 
 Manual approval provided:
+![alt text](/images/pipeline_6_manual_approval.png)
 
+![alt text](/images/pipeline_7_prod_stage.png)
+
+![alt text](/images/pipeline_8_prod_stack.png)
+
+![alt text](/images/web_servers_ec2.png)
 
 ### Cleanup
-Don’t forget to delete AWS resources to avoid unexpected costs:
-
-Use aws cloudformation delete-stack --stack-name for each stack.
-Optionally delete the S3 bucket if no longer needed.
-
+Don’t forget to delete AWS resources to avoid unexpected costs, and also delete the S3 bucket if no longer needed. Use aws cloudformation delete-stack --stack-name for each stack.
 
 ### Conclusion
 GitHub Actions simplifies infrastructure provisioning on AWS using CloudFormation and GitOps practices. With environment-specific templates, secure credentials management, and declarative pipelines, it brings modern DevOps practices closer to your infrastructure-as-code workflows. This approach ensures consistency, traceability, and repeatability across environments.
