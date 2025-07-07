@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        env: [development, staging, production]
+        env: [development, staging]
     environment:
       name: ${{ matrix.env }}
       url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1

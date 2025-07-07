@@ -196,7 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        env: [development, staging, production]
+        env: [development, staging]
     environment:
       name: ${{ matrix.env }}
       url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1
@@ -264,6 +264,7 @@ Git push the components to GitHub Repo
 
 
 Development and Staging environments getting provisioned whereas production environment stage awaiting manual approval.
+
 
 
 Manual approval provided:
