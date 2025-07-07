@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'infrastructure/**'
   workflow_dispatch:
 
 env:
@@ -129,32 +127,3 @@ jobs:
             --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
             --capabilities CAPABILITY_NAMED_IAM
           aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env }}Stack
-
-  # deploy_production:
-  #   name: Deploy Production Stack
-  #   needs: [validate_templates]
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: production
-  #     url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-1
-
-  #     - name: Deploy Production Stack
-  #       run: |
-  #         aws cloudformation create-stack \
-  #           --template-url https://${{ env.BUCKET_NAME }}.s3.${{ env.AWS_REGION }}.amazonaws.com/infrastructure/production/root.yaml \
-  #           --stack-name DeployProductionStack \
-  #           --parameters ParameterKey=Environment,ParameterValue=production \
-  #           --capabilities CAPABILITY_NAMED_IAM
-
-  #     - name: Wait for Stack Completion
-  #       run: |
-  #         aws cloudformation wait stack-create-complete --stack-name DeployProductionStack
