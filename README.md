@@ -83,11 +83,12 @@ These templates are modular and reusable using nested stacks.
 ### Step 3: GitHub Actions Workflow (.github/workflows/aws-cfn-deploy.yml)
 Here’s a sample GitHub Actions pipeline:
 
-- `create_bucket`	Creates an S3 bucket to store templates
-- `copy_templates`	Uploads CFN templates to S3
-- `lint_templates`	Lints CFN templates using cfn-lint
+- `create_bucket` - Creates an S3 bucket to store templates
+- `copy_templates` - Uploads CFN templates to S3
+- `lint_templates` - Lints CFN templates using cfn-lint
 - `validate_templates`	Validates S3-hosted templates via aws cloudformation validate-template
-- `deploy`	Deploys stacks using a matrix across dev, staging, and prod environments. Conditional logic allows deploying production only via manual trigger (workflow_dispatch) to avoid accidental deployments on push.
+- `deploy` - Deploys stacks using a matrix across dev, staging, and prod environments. 
+- `deploy_production` - Conditional logic allows deploying production only via manual trigger (workflow_dispatch) to avoid accidental deployments on push.
 
 ```yml
 name: AWS CloudFormation CI/CD using GitHub Actions
@@ -210,7 +211,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy CloudFormation Stack
-        if: matrix.env != 'production' || github.event_name == 'workflow_dispatch'
         run: |
           echo "Deploying to ${{ matrix.env }}..."
           aws cloudformation create-stack \
@@ -218,7 +218,39 @@ jobs:
             --stack-name Deploy${{ matrix.env }}Stack \
             --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
             --capabilities CAPABILITY_NAMED_IAM
+
+      - name: Wait for Stack Completion
+        run: |
           aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env }}Stack
+
+  deploy_production:
+    name: Deploy Production Stack
+    needs: [validate_templates]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy Production Stack
+        run: |
+          aws cloudformation create-stack \
+            --template-url https://${{ env.BUCKET_NAME }}.s3.${{ env.AWS_REGION }}.amazonaws.com/infrastructure/production/root.yaml \
+            --stack-name DeployProductionStack \
+            --parameters ParameterKey=Environment,ParameterValue=production \
+            --capabilities CAPABILITY_NAMED_IAM
+
+      - name: Wait for Stack Completion
+        run: |
+          aws cloudformation wait stack-create-complete --stack-name DeployProductionStack
 ```
 
 In this yml file, `push` to `main`: Automatically triggers the workflow whenever someone pushes code to the main branch.
@@ -230,9 +262,12 @@ In this yml file, `push` to `main`: Automatically triggers the workflow whenever
 ### Step 4: Git Push to repo to see automated GitHub Actions Pipeline running
 Git push the components to GitHub Repo
 
+
 Development and Staging environments getting provisioned whereas production environment stage awaiting manual approval.
 
+
 Manual approval provided:
+
 
 ### Cleanup
 Don’t forget to delete AWS resources to avoid unexpected costs:
