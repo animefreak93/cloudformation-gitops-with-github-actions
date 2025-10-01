@@ -117,18 +117,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy CloudFormation Stack
+      - name: Package & Deploy CloudFormation Stack
         run: |
           echo "Deploying to ${{ matrix.env }}..."
-          aws cloudformation deploy \
-            --template-url https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/infrastructure/${{ matrix.env }}/root.yaml \
-            --stack-name Deploy${{ matrix.env }}Stack \
-            --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
-            --capabilities CAPABILITY_NAMED_IAM
+          aws cloudformation package \
+            --template-file infrastructure/${{ matrix.env }}/root.yaml \
+            --s3-bucket ${BUCKET_NAME} \
+            --output-template-file packaged-root.yaml
 
-      - name: Wait for Stack Completion
-        run: |
-          aws cloudformation wait stack-create-complete --stack-name Deploy${{ matrix.env }}Stack
+          aws cloudformation deploy \
+            --template-file packaged-root.yaml \
+            --stack-name Deploy${{ matrix.env }}Stack \
+            --parameter-overrides Environment=${{ matrix.env }} \
+            --capabilities CAPABILITY_NAMED_IAM
 
   deploy_production:
     name: Deploy Production Stack
@@ -145,16 +146,18 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-5
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy Production Stack
+      - name: Package & Deploy Production Stack
         run: |
-          aws cloudformation create-stack \
-            --template-url https://${{ env.BUCKET_NAME }}.s3.${{ env.AWS_REGION }}.amazonaws.com/infrastructure/production/root.yaml \
+          echo "Deploying to production..."
+          aws cloudformation package \
+            --template-file infrastructure/production/root.yaml \
+            --s3-bucket ${BUCKET_NAME} \
+            --output-template-file packaged-root.yaml
+
+          aws cloudformation deploy \
+            --template-file packaged-root.yaml \
             --stack-name DeployProductionStack \
-            --parameters ParameterKey=Environment,ParameterValue=production \
+            --parameter-overrides Environment=production \
             --capabilities CAPABILITY_NAMED_IAM
-
-      - name: Wait for Stack Completion
-        run: |
-          aws cloudformation wait stack-create-complete --stack-name DeployProductionStack
