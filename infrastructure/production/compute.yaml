@@ -59,7 +59,7 @@ Resources:
       LaunchTemplateName: !Sub "${Environment}-launch-template"
       LaunchTemplateData:
         InstanceType: !Ref InstanceType
-        KeyName: WorkshopKeyPair
+        KeyName: AutoActionKeyPair
         IamInstanceProfile:
           Name: !Ref IAMInstanceProfile
         ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
