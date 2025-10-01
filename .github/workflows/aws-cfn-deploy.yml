@@ -120,7 +120,7 @@ jobs:
       - name: Deploy CloudFormation Stack
         run: |
           echo "Deploying to ${{ matrix.env }}..."
-          aws cloudformation create-stack \
+          aws cloudformation deploy \
             --template-url https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/infrastructure/${{ matrix.env }}/root.yaml \
             --stack-name Deploy${{ matrix.env }}Stack \
             --parameters ParameterKey=Environment,ParameterValue=${{ matrix.env }} \
