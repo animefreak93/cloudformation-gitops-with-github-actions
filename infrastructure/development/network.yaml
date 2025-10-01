@@ -35,7 +35,7 @@ Resources:
       VpcId: !Ref MyVPC
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select [ 0, !GetAZs "us-east-1" ]
+      AvailabilityZone: !Select [ 0, !GetAZs "ap-southeast-5" ]
       Tags:
         - Key: Name
           Value: !Sub "${Environment}-public-subnet"
