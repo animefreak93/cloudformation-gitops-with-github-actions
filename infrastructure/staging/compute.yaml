@@ -99,7 +99,7 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref LaunchTemplate
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
-      MinSize: 1
+      MinSize: 0
       MaxSize: 3
       DesiredCapacity: 0
       Tags:
