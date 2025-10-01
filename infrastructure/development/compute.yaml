@@ -101,7 +101,7 @@ Resources:
         Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MinSize: 1
       MaxSize: 3
-      DesiredCapacity: 3
+      DesiredCapacity: 0
       Tags:
         - Key: Name
           Value: !Sub "${Environment}-ec2-instance"
