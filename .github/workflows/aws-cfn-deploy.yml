@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: ap-southeast-5
-  BUCKET_NAME: ct-cfn-files-for-stack-github-actions
+  BUCKET_NAME: syedeys-ct-cfn-files-for-stack-github-actions
 
 jobs:
 
