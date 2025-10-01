@@ -4,7 +4,7 @@ Description: 'Parent Stack for the specified environment'
 Parameters:
   TemplateUrlBase: 
     Type: String
-    Default: 'https://ct-cfn-files-for-stack-github-actions.s3.us-east-1.amazonaws.com/infrastructure'
+    Default: 'https://syedeys-ct-cfn-files-for-stack-github-actions.s3.ap-southeast-5.amazonaws.com/infrastructure'
   Environment:
     Description: List of available environments
     Type: String
